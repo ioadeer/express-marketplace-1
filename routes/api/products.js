@@ -21,6 +21,13 @@ router.get('/', passport.authenticate('jwt', {session: false}), (req, res) =>{
 	}
 });
 
+router.get('/all', (req, res) =>{
+	Product.find({}).then( (products, err) => {
+		if(err) res.status(400).json({error: "No product found"})
+		return res.status(200).json({ products: products});
+	});
+});
+
 router.post('/create',passport.authenticate('jwt', {session: false}), (req, res) =>{
 	const userName = req.user.name;
 	const productName = req.body.productname;
@@ -66,7 +73,6 @@ router.put('/update/:id', passport.authenticate('jwt', {session: false}),(req,re
 	const productId = req.params.id;
 	const userName = req.user.name;
 
-	debugger;
 	const productName = req.body.productname;
 	const price  = req.body.price;
 	const isForSale = req.body.isforsale;
