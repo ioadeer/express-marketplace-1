@@ -4,6 +4,7 @@ const passport = require('passport');
 
 const Product = require('../../models/Products');
 const User = require('../../models/User');
+const Receipt = require('../../models/Receipt');
 
 // @route GET /api/products/
 // @desc  Returns all products owned by user
@@ -159,15 +160,28 @@ router.post('/buy/:id',passport.authenticate('jwt', {session: false}), (req,res)
 					if(buyer.balance < product.price) {
 						return res.status(400).json({ error: "Not enough funds"});
 					} else {
-						//return res.status(200).json({message: "product swap"});
-						User.findOneAndUpdate({ 'product' : product._id},
-							{ $pull: {product: product._id},
-							 	$inc: {balance: product.price}},
-							{ new: true, useFindAndModify: false },
-							function(err,raw){
-								if (err) return res.status(400).json({ error: err, what : "could not pull and pay" });
-								console.log(raw);
+						User.findOne({ 'product' : product._id}).then((seller, err) =>{
+							seller.balance += product.price;
+							const productPos = seller.product.indexOf(product);
+							seller.product.splice(productPos,1);
+							seller.save( (err, result) => {
+								if(err) res.status(400).json({ error: "Not enough funds"});
+								//console.log(result);
 							});
+							const newReceipt = new Receipt({seller: seller, buyer: buyer, value: product.price, product: product});
+							newReceipt.save( (err, result)=> {
+								if(err) res.status(400).json({ error: err, what: "Could not create receipt"});
+								//console.log(result);
+							});
+						}).catch(err => {res.status(400).json({ error: err, seller: "Not found"});});
+						//User.findOneAndUpdate({ 'product' : product._id},
+						//	{ $pull: {product: product._id},
+						//	 	$inc: {balance: product.price}},
+						//	{ new: true, useFindAndModify: false },
+						//	function(err,raw){
+						//		if (err) return res.status(400).json({ error: err, what : "could not pull and pay" });
+						//		console.log(raw);
+						//	});
 						buyer.product.push(product);
 						buyer.balance-=product.price;
 						buyer.save((err, raw) => {
@@ -178,6 +192,7 @@ router.post('/buy/:id',passport.authenticate('jwt', {session: false}), (req,res)
 								to: buyer.name,
 								product: product});
 						});
+
 					}
 				}
 			}).catch(err => console.log(err));
