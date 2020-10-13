@@ -160,16 +160,16 @@ router.post('/buy/:id',passport.authenticate('jwt', {session: false}), (req,res)
 					if(buyer.balance < product.price) {
 						return res.status(400).json({ error: "Not enough funds"});
 					} else {
-						User.findOne({ 'product' : product._id}).then((seller, err) =>{
+						User.findOne({ 'product' : product._id}).then( seller =>{
 							seller.balance += product.price;
 							const productPos = seller.product.indexOf(product);
 							seller.product.splice(productPos,1);
-							seller.save( (err, result) => {
+							seller.save( (err) => {
 								if(err) res.status(400).json({ error: "Not enough funds"});
 								//console.log(result);
 							});
 							const newReceipt = new Receipt({seller: seller, buyer: buyer, value: product.price, product: product});
-							newReceipt.save( (err, result)=> {
+							newReceipt.save( (err)=> {
 								if(err) res.status(400).json({ error: err, what: "Could not create receipt"});
 								//console.log(result);
 							});
