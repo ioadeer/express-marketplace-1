@@ -42,7 +42,6 @@ router.get('/sold', passport.authenticate('jwt', {session: false}), (req, res) =
 		return res.status(400).json({ restricted : "nono"});
 	} else {
 	const userEmail = req.user.email;
-	debugger;
 	User.findOne({ 'email' : userEmail})
 			.then( user => {
 				debugger;
