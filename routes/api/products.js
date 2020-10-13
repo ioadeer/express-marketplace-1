@@ -7,7 +7,7 @@ const User = require('../../models/User');
 
 // @route GET /api/products/
 // @desc  Returns all products owned by user
-// @acces Public
+// @access Public
 router.get('/', passport.authenticate('jwt', {session: false}), (req, res) =>{
 	const user  = req.user;
 	if(!user) {
@@ -36,7 +36,7 @@ router.get('/all', (req, res) =>{
 
 // @route  POST /api/products/create
 // @desc   Create product 
-// @access Private  
+// @access Public 
 router.post('/create',passport.authenticate('jwt', {session: false}), (req, res) =>{
 	const userName = req.user.name;
 	const productName = req.body.productname;
@@ -83,7 +83,7 @@ router.get('/detail/:id', (req,res) => {
 
 // @route  PUT /api/products/update/:id
 // @desc   Update product 
-// @access Private 
+// @access Public 
 router.put('/update/:id', passport.authenticate('jwt', {session: false}),(req,res) => {
 	const productId = req.params.id;
 	const userName = req.user.name;
