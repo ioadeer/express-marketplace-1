@@ -15,10 +15,6 @@ const UserSchema = new Schema({
 		type: String,
 		required: true,
 	},
-	date: {
-		type: Date,
-		default: Date.now
-	},
 	balance: {
 		type: Number,
 	},
@@ -26,6 +22,6 @@ const UserSchema = new Schema({
 		type: mongoose.Schema.Types.ObjectId,
 		ref: 'products',
 	}],
-});
+}, { timestamps: true });
 
 module.exports = User = mongoose.model('users', UserSchema);

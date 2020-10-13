@@ -5,6 +5,9 @@ const passport = require('passport');
 const Product = require('../../models/Products');
 const User = require('../../models/User');
 
+// @route GET /api/products/
+// @desc  Returns all products owned by user
+// @acces Public
 router.get('/', passport.authenticate('jwt', {session: false}), (req, res) =>{
 	const user  = req.user;
 	if(!user) {
@@ -21,6 +24,9 @@ router.get('/', passport.authenticate('jwt', {session: false}), (req, res) =>{
 	}
 });
 
+// @route GET /api/products/all
+// @desc  Returns all products 
+// @access Public
 router.get('/all', (req, res) =>{
 	Product.find({}).then( (products, err) => {
 		if(err) res.status(400).json({error: "No product found"})
@@ -28,6 +34,9 @@ router.get('/all', (req, res) =>{
 	});
 });
 
+// @route  POST /api/products/create
+// @desc   Create product 
+// @access Private  
 router.post('/create',passport.authenticate('jwt', {session: false}), (req, res) =>{
 	const userName = req.user.name;
 	const productName = req.body.productname;
@@ -61,6 +70,9 @@ router.post('/create',passport.authenticate('jwt', {session: false}), (req, res)
 		});
 	});
 
+// @route  GET /api/products/detail/:id
+// @desc   Product detail
+// @access Public
 router.get('/detail/:id', (req,res) => {
 	const productId = req.params.id;
 	Product.findById( productId, (err, product) => {
@@ -69,6 +81,9 @@ router.get('/detail/:id', (req,res) => {
 	});
 });
 
+// @route  PUT /api/products/update/:id
+// @desc   Update product 
+// @access Private 
 router.put('/update/:id', passport.authenticate('jwt', {session: false}),(req,res) => {
 	const productId = req.params.id;
 	const userName = req.user.name;
@@ -100,11 +115,13 @@ router.put('/update/:id', passport.authenticate('jwt', {session: false}),(req,re
 		.catch(err => console.log(err));
 });
 
+// @route  DELETE /api/products/update/:id
+// @desc   Delete product 
+// @access Private 
 router.delete('/:id', passport.authenticate('jwt', {session: false}), (req,res) => {
 	const productId = req.params.id;
 	const userName = req.user.name;
 
-	// Check if product is owned by user
 	User.findOne({ name: userName })
 		.then( async user => {
 			if(user.product.includes(productId)){
@@ -122,6 +139,9 @@ router.delete('/:id', passport.authenticate('jwt', {session: false}), (req,res) 
 		.catch(err => console.log(err));
 });
 
+// @route  POST /api/products/buy/:id
+// @desc   Buy product 
+// @access Private 
 router.post('/buy/:id',passport.authenticate('jwt', {session: false}), (req,res) => {
 	const productId = req.params.id;
 	const productBuyer = req.user.name;

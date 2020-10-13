@@ -17,7 +17,7 @@ module.exports = function valedateRegisterInput(data){
 	if (Validator.isEmpty(data.email)) {
 		errors.email = "Email field is required";
 	} else if (!Validator.isEmail(data.email)){
-		erros.email = "Email is invalid";
+		errors.email = "Email is invalid";
 	}
 
 	//Password checks
