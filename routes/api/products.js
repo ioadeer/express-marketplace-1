@@ -6,6 +6,9 @@ const Product = require('../../models/Products');
 const User = require('../../models/User');
 const Receipt = require('../../models/Receipt');
 
+const {
+	validateProductCreate,
+} = require('../../validation/products');
 // @route GET /api/products/
 // @desc  Returns all products owned by user
 // @access Public
@@ -39,13 +42,15 @@ router.get('/all', (req, res) =>{
 // @desc   Create product 
 // @access Public 
 router.post('/create',passport.authenticate('jwt', {session: false}), (req, res) =>{
+
+	const { errors, isValid } = validateProductCreate(req);
+	if(!isValid){
+		return res.status(400).json({error: errors});
+	}
+
 	const userName = req.user.name;
 	const productName = req.body.productname;
 	const price = req.body.price;
-
-	if(!productName || !price ) {
-		return res.status(400).json({ error : "Invalid name or price" });
-	}
 	const newProduct = new Product({
 		name: productName,
 		price: price,
@@ -75,6 +80,7 @@ router.post('/create',passport.authenticate('jwt', {session: false}), (req, res)
 // @desc   Product detail
 // @access Public
 router.get('/detail/:id', (req,res) => {
+
 	const productId = req.params.id;
 	Product.findById( productId, (err, product) => {
 		if(err) { return res.status(404).json({ error: "Product not found"});}
@@ -174,14 +180,6 @@ router.post('/buy/:id',passport.authenticate('jwt', {session: false}), (req,res)
 								//console.log(result);
 							});
 						}).catch(err => {res.status(400).json({ error: err, seller: "Not found"});});
-						//User.findOneAndUpdate({ 'product' : product._id},
-						//	{ $pull: {product: product._id},
-						//	 	$inc: {balance: product.price}},
-						//	{ new: true, useFindAndModify: false },
-						//	function(err,raw){
-						//		if (err) return res.status(400).json({ error: err, what : "could not pull and pay" });
-						//		console.log(raw);
-						//	});
 						buyer.product.push(product);
 						buyer.balance-=product.price;
 						buyer.save((err, raw) => {
