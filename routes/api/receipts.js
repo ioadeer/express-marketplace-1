@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const passport = require('passport');
 
-const Product = require('../../models/Products');
+const Product = require('../../models/Product');
 const User = require('../../models/User');
 const Receipt = require('../../models/Receipt');
 
@@ -23,7 +23,7 @@ router.get('/purchased', passport.authenticate('jwt', {session: false}), (req, r
           .sort({createdAt : -1})
           .select('-_id -__v -updatedAt -buyer')
           .populate({path: 'seller', select: '-_id name email' })
-          .populate({ path: 'product', select: '-_id name'})
+          .populate({ path: 'products', select: '-_id name'})
           .exec(function(err, receipts){
             if (err) { return res.status(400).json({ error: err });} 
             return res.status(200).json({receipts: receipts});
@@ -49,7 +49,7 @@ router.get('/sold', passport.authenticate('jwt', {session: false}), (req, res) =
           .sort({createdAt : -1})
           .select('-_id -__v -updatedAt -seller')
           .populate({path: 'buyer', select: '-_id name email' })
-          .populate({ path: 'product', select: '-_id name'})
+          .populate({ path: 'products', select: '-_id name'})
           .exec(function(err, receipts){
             if (err) { return res.status(400).json({ error: err });} 
             return res.status(200).json({receipts: receipts});

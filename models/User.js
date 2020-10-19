@@ -19,7 +19,7 @@ name: {
         type: Number,
         default: 0,
     },
-    product: [{
+    products: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'products',
     }],

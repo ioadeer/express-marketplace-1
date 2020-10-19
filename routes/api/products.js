@@ -2,13 +2,14 @@ const express = require('express');
 const router = express.Router();
 const passport = require('passport');
 
-const Product = require('../../models/Products');
+const Product = require('../../models/Product');
 const User = require('../../models/User');
 const Receipt = require('../../models/Receipt');
 
 const {
     validateProductCreate,
 } = require('../../validation/products');
+
 // @route GET /api/products/
 // @desc  Returns all products owned by user
 // @access Public
@@ -22,7 +23,7 @@ router.get('/', passport.authenticate('jwt', {session: false}), (req, res) =>{
     if (err) { return res.status(400).json({ error: err });} 
     User.findById(user._id).populate("product").exec((err, user) =>{
     if(err) return res.status(400).json({ error: err });
-      return res.status(200).json({ products: user.product})
+      return res.status(200).json({ products: user.products})
     });
   });
   }
@@ -63,7 +64,7 @@ router.post('/create',passport.authenticate('jwt', {session: false}), (req, res)
   
   User.findOne({ name: userName }).then( user => {
     User.findByIdAndUpdate(user._id,
-      { $push: {product: newProduct}},
+      { $push: {products: newProduct}},
       { new: true, useFindAndModify: false},
       (err, doc) => {
         if(err){
@@ -101,7 +102,7 @@ router.put('/update/:id', passport.authenticate('jwt', {session: false}),(req,re
 
   User.findOne({ name: userName })
     .then( user => {
-      if(user.product.includes(productId)){
+      if(user.products.includes(productId)){
         Product.findOneAndUpdate( {_id: productId }, 
           { $set:
             {
@@ -131,8 +132,8 @@ router.delete('/:id', passport.authenticate('jwt', {session: false}), (req,res) 
 
   User.findOne({ name: userName })
     .then( async user => {
-      if(user.product.includes(productId)){
-        await User.updateOne({'name': userName}, { $pull: { product : productId }});
+      if(user.products.includes(productId)){
+        await User.updateOne({'name': userName}, { $pull: { products: productId }});
         Product.findByIdAndDelete( productId , 
           { useFindAndModify: false },
           (err,data) => {
@@ -160,7 +161,7 @@ router.post('/buy/:id',passport.authenticate('jwt', {session: false}), (req,res)
     } else {
       User.findOne({ 'name' : productBuyer}).then( (buyer, err) => {
         if(err) return res.status(404).json({ error: "Buyer doesn't exists"});
-        if(buyer.product.includes(product._id)){
+        if(buyer.products.includes(product._id)){
           return res.status(400).json({ error: "Can't buy your own product"});
         } else {
           if(buyer.balance < product.price) {
@@ -168,8 +169,8 @@ router.post('/buy/:id',passport.authenticate('jwt', {session: false}), (req,res)
           } else {
             User.findOne({ 'product' : product._id}).then( seller =>{
               seller.balance += product.price;
-              const productPos = seller.product.indexOf(product);
-              seller.product.splice(productPos,1);
+              const productPos = seller.products.indexOf(product);
+              seller.products.splice(productPos,1);
               seller.save( (err) => {
                 if(err) return res.status(400).json({ err, error: "Error writing seller"});
               });
@@ -179,7 +180,7 @@ router.post('/buy/:id',passport.authenticate('jwt', {session: false}), (req,res)
                 //console.log(result);
               });
             }).catch(err => { return res.status(400).json({ error: err, seller: "Not found"});});
-            buyer.product.push(product);
+            buyer.products.push(product);
             buyer.balance-=product.price;
             buyer.save((err, raw) => {
               if (err){ 

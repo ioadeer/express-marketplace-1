@@ -1,4 +1,5 @@
 const chai = require('chai');
+const assert =  require('chai').assert;
 const chaiHttp = require('chai-http');
 const app = require('../../server');
 
@@ -7,17 +8,18 @@ const User = require('../../models/User');
 chai.use(chaiHttp);
 chai.should();
 
+
 describe("Users register", () => {
 
-  let user = new User({
+  let testUser = new User({
     name: "TestUser",
     email: "test@user.com",
     password: "TestPass",
   });
 
   before( () => {
-    user.save()
-      .then(user => console.log("Test user created: "+user))
+    testUser.save()
+      .then(user => { return user })
       .catch(err => console.log("err :"+err+" couldn't create test user"));
   });
 
@@ -34,6 +36,9 @@ describe("Users register", () => {
         .end((err,res) => {
           res.should.have.status(200);
           res.body.should.be.a('object');
+          assert.equal(res.body.name, userJson.name);
+          assert.equal(res.body.email, userJson.email);
+          assert.notEqual(res.body.password, userJson.password);
           done();
         });
   });
@@ -41,14 +46,15 @@ describe("Users register", () => {
   it("User", () =>{
     it("User login should return err or user ", (done) =>{
       chai.request(app)
-          .post('/login')
+          .post('api/users/login')
           .send({
-            email: "test@user.com",
-            password: "TestPass",
+            email: testUser.email,
+            password: testUser.password,
           })
           .end((err,res) => {
             res.should.have.status(200);
             res.body.should.be.a('object');
+            assert.equal(res.json.success, "true");
             done();
           });
     });
