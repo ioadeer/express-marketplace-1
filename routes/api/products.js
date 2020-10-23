@@ -7,16 +7,21 @@ const User = require('../../models/User');
 const Receipt = require('../../models/Receipt');
 
 const {
-    validateProductCreate,
+  validateProductCreate,
+  validateProductUpdate,
 } = require('../../validation/products');
+
+const {
+  validateMongoId,
+} = require('../../validation/util');
 
 // @route GET /api/products/
 // @desc  Returns all products owned by user
 // @access Public
 router.get('/', passport.authenticate('jwt', {session: false}), (req, res) =>{
-    const user  = req.user;
-        if(!user) {
-    return res.status(400).json({ restricted : "nono"})
+  const user  = req.user;
+    if(!user) {
+      return res.status(400).json({ restricted : "nono"})
   } else {
   const userEmail = req.user.email;
   User.findOne({ email : userEmail}, (err, user) => {
@@ -71,7 +76,6 @@ router.post('/create',passport.authenticate('jwt', {session: false}), (req, res)
           return res.status(400).json({ error: err })
         } else {
           return res.status(200).json({ created: 'success', user: doc.name, product: newProduct})
-
         }
       });
     });
@@ -81,6 +85,11 @@ router.post('/create',passport.authenticate('jwt', {session: false}), (req, res)
 // @desc   Product detail
 // @access Public
 router.get('/detail/:id', (req,res) => {
+
+  const { errors, isValid } = validateMongoId(req);
+  if(!isValid){
+    return res.status(400).json({error: errors});
+  }
 
   const productId = req.params.id;
   Product.findById( productId, (err, product) => {
@@ -93,6 +102,12 @@ router.get('/detail/:id', (req,res) => {
 // @desc   Update product 
 // @access Public 
 router.put('/update/:id', passport.authenticate('jwt', {session: false}),(req,res) => {
+
+  const { errors, isValid } = validateProductUpdate(req);
+  if(!isValid){
+    return res.status(400).json({error: errors});
+  }
+
   const productId = req.params.id;
   const userName = req.user.name;
 
@@ -113,14 +128,14 @@ router.put('/update/:id', passport.authenticate('jwt', {session: false}),(req,re
           },
           { new: true, useFindAndModify: false },
           (err,data) => {
-          if(err) return res.status(400).json({ error: err});
+          if(err) return res.status(401).json({ error: err});
           return res.status(200).json({updated : data});
         })
       } else {
-        return res.status(400).json({denied: "Product doesn't exist"});
+        return res.status(404).json({denied: "Product doesn't exist"});
       }
     })
-    .catch(err => console.log(err));
+    .catch(err => res.status(404).json({err: err}));
 });
 
 // @route  DELETE /api/products/update/:id

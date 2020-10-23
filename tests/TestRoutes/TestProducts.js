@@ -61,6 +61,7 @@ const testBuyerUser = new User({
 });
 
 bcrypt.genSalt(10, (err, salt) => {
+  if (err) throw err;
   bcrypt.hash(testBuyerUser.password, salt, (err, hash) =>{
     if (err) throw err;
     testBuyerUser.password = hash;
@@ -77,6 +78,7 @@ describe("GET /api/products/all", () => {
     chai.request(app)
       .get('/api/products/all')
       .end((err,res) => {
+        if (err) return err;
         res.should.have.status(200);
         res.body.products.should.be.an('array');
         done();
@@ -90,11 +92,23 @@ describe("GET /api/products/detail/:id", () => {
     chai.request(app)
       .get(`/api/products/detail/${aProduct._id}`)
       .end((err,res) => {
+        if (err) return err;
         res.should.have.status(200);
         assert.equal(aProduct.name, res.body.product.name);
         assert.equal(aProduct.price, res.body.product.price);
         assert.equal(aProduct.isForSale, res.body.product.isForSale);
         done();
+      });
+  });
+  it("Should require valid Mongo Id", (done) => {
+    chai.request(app)
+      .get('/api/products/detail/1234')
+      .end((err,res) => {
+        if (err) return err;
+        res.should.have.status(400);
+        res.body.should.be.a('object');
+        assert.equal(res.body.error.product_error,"Product Id is required");
+        done()
       });
   });
 });
@@ -110,6 +124,7 @@ describe("GET / user products", () => {
         password: "TestPass",
       })
       .end((err,res) => {
+        if (err) return err;
         token = res.body.token;
         done();
       });
@@ -118,6 +133,7 @@ describe("GET / user products", () => {
     chai.request(app)
       .get('/api/products/')
       .end((err,res) => {
+        if (err) return err;
         res.should.have.status(401);
         done();
       });
@@ -127,6 +143,7 @@ describe("GET / user products", () => {
       .get('/api/products/')
       .set({'Authorization': `${token}`})
       .end((err, res) => {
+        if (err) return err;
         res.should.have.status(200);
         res.body.should.be.a('object');
         res.body.products.should.be.an('array');
@@ -146,6 +163,7 @@ describe("POST /api/products/create", () => {
         password: "TestPass",
       })
       .end((err,res) => {
+        if (err) return err;
         token = res.body.token;
         done();
       });
@@ -154,6 +172,7 @@ describe("POST /api/products/create", () => {
     chai.request(app)
       .post('/api/products/create')
       .end((err,res) => {
+        if (err) return err;
         res.should.have.status(401);
         done();
       });
@@ -164,6 +183,7 @@ describe("POST /api/products/create", () => {
       .set({'Authorization': `${token}`})
       .send({productname: "Violin", price: "3", isforsale: true})
       .end((err, res) => {
+        if (err) return err;
         res.should.have.status(200);
         res.body.should.be.a('object');
         assert.equal(res.body.created, "success");
@@ -176,3 +196,174 @@ describe("POST /api/products/create", () => {
       });
   });
 });
+
+describe("PUT /api/products/update/:id", () => {
+  let tokenOwner;
+  let tokenNotOwner;
+
+  before((done) => {
+    chai.request(app)
+      .post('/api/users/login')
+      .send({
+        email: "testjwt@user.com",
+        password: "TestPass",
+      })
+      .end((err,res) => {
+        if (err) return err;
+        tokenOwner = res.body.token;
+        done();
+      });
+  });
+
+  before((done) => {
+    chai.request(app)
+      .post('/api/users/login')
+      .send({
+        email: "testuser@buyer.com",
+        password: "BuyerPass",
+      })
+      .end((err,res) => {
+        if (err) return err;
+        tokenNotOwner = res.body.token;
+        done();
+      });
+  });
+
+  it("Should require authorization", (done) => {
+    chai.request(app)
+      .put(`/api/products/update/${aProduct._id}`)
+      .end((err,res) => {
+        if (err) return err;
+        res.should.have.status(401);
+        done();
+      });
+  });
+
+  it("Product should belong to user", (done) => {
+    chai.request(app)
+      .put(`/api/products/update/${aProduct._id}`)
+      .set({'Authorization': `${tokenNotOwner}`})
+      .send({
+        productname: "ViolinModificado", 
+        price: "5", 
+        isforsale: "false",
+      })
+      .end((err,res) => {
+        if (err) return err;
+        res.should.have.status(404);
+        done();
+      });
+  });
+
+  it("Should update product that belongs to user that makes request", (done) => {
+    chai.request(app)
+      .put(`/api/products/update/${aProduct._id}`)
+      .set({'Authorization': `${tokenOwner}`})
+      .send({
+        productname: "ViolinModificado", 
+        price: "5", 
+        isforsale: "false",
+      })
+      .end((err, res) => {
+        if (err) return err;
+        res.should.have.status(200);
+        res.body.should.be.a('object');
+        assert.equal(res.body.updated._id, aProduct._id);
+        assert.equal(res.body.updated.name, "ViolinModificado");
+        assert.equal(res.body.updated.price, "5");
+        assert.equal(res.body.updated.isForSale, false);
+        done()
+      });
+  });
+
+  it("Should require product name for update", (done) => {
+    chai.request(app)
+      .put(`/api/products/update/${aProduct._id}`)
+      .set({'Authorization': `${tokenOwner}`})
+      .send({
+        productname: null, 
+        price: "5", 
+        isforsale: "false",
+      })
+      .end((err, res) => {
+        if (err) return err;
+        res.should.have.status(400);
+        res.body.should.be.a('object');
+        assert.equal(res.body.error.product_name_error,"Product name is required");
+        done()
+      });
+  });
+
+  it("Should require product is for sale status for update", (done) => {
+    chai.request(app)
+      .put(`/api/products/update/${aProduct._id}`)
+      .set({'Authorization': `${tokenOwner}`})
+      .send({
+        productname: "Violin", 
+        price: "5", 
+        isforsale: null,
+      })
+      .end((err, res) => {
+        if (err) return err;
+        res.should.have.status(400);
+        res.body.should.be.a('object');
+        assert.equal(res.body.error.is_for_sale_error,"Stating wether product is for sale is required");
+        done()
+      });
+  });
+
+  it("Should require product price for update", (done) => {
+    chai.request(app)
+      .put(`/api/products/update/${aProduct._id}`)
+      .set({'Authorization': `${tokenOwner}`})
+      .send({
+        productname: "Violin", 
+        price: null, 
+        isforsale: "true",
+      })
+      .end((err, res) => {
+        if (err) return err;
+        res.should.have.status(400);
+        res.body.should.be.a('object');
+        assert.equal(res.body.error.price_error,"Price is required");
+        done()
+      });
+  });
+
+  it("Should require product price to be a number", (done) => {
+    chai.request(app)
+      .put(`/api/products/update/${aProduct._id}`)
+      .set({'Authorization': `${tokenOwner}`})
+      .send({
+        productname: "Violin", 
+        price: "Violin", 
+        isforsale: "true",
+      })
+      .end((err, res) => {
+        if (err) return err;
+        res.should.have.status(400);
+        res.body.should.be.a('object');
+        assert.equal(res.body.error.price_error,"Price must be a number");
+        done()
+      });
+  });
+
+  it("Should require valid Mongo Id", (done) => {
+    chai.request(app)
+      .put('/api/products/update/1234')
+      .set({'Authorization': `${tokenOwner}`})
+      .send({
+        productname: "Violin", 
+        price: "Violin", 
+        isforsale: "true",
+      })
+      .end((err, res) => {
+        if (err) return err;
+        res.should.have.status(400);
+        res.body.should.be.a('object');
+        assert.equal(res.body.error.product_error,"Product Id is required");
+        done()
+      });
+  });
+});
+
